@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Config {
+  id              Int      @id @default(1)
+  holgura         Float    @default(2.0)
+  theme           String   @default("light")
+  checkStock      Boolean  @default(true)
+  stockAlerts     Boolean  @default(true)
+  deliveryDays    Int      @default(14)
+  // Email configuracion
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPassword    String?
+
+  updatedAt       DateTime @updatedAt
+}
+
+model Fabricante {
+  id          String   @id @default(cuid())
+  nombre      String
+  tiempoEspera Int     @default(0) // en dias
+  productos   Producto[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Cliente {
+  id                      String   @id @default(cuid())
+  nombre                  String
+  email                   String?
+  telefono                String?
+  direccion               String?
+  descuentoFijo           Float    @default(0)
+  aplicarDescuentoSiempre Boolean  @default(false)
+  presupuestos            Presupuesto[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+enum TipoProducto {
+  MOLDURA
+  PROTECCION
+  TRASERA
+  PASSE_PARTOUT
+  ARTICULO_UNITARIO
+}
+
+model Producto {
+  id          String       @id @default(cuid())
+  tipo        TipoProducto
+  referencia  String       @unique
+  nombre      String
+  descripcion String?
+  precio      Float
+  coste       Float?
+  stock       Float
+  stockMinimo Float?
+
+  fabricanteId String?
+  fabricante   Fabricante? @relation(fields: [fabricanteId], references: [id])
+
+  anchoMoldura Float?
+  largoBarra   Float?
+
+  anchoMaximo  Float?
+  altoMaximo   Float?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  presupuestoItems PresupuestoItem[]
+}
+
+model Presupuesto {
+  id                String   @id @default(cuid())
+  codigoSeguimiento String   @unique
+
+  clienteId         String?
+  cliente           Cliente? @relation(fields: [clienteId], references: [id])
+
+  estado            EstadoPresupuesto @default(PRESUPUESTO)
+
+  pagado            Boolean  @default(false)
+  cantidadAcuenta   Float    @default(0)
+  descuentoGlobal   Float    @default(0)
+  observaciones     String?  @db.Text
+
+  anchoObra         Float
+  altoObra          Float
+  holguraUsada      Float    @default(2.0)
+
+  precioTotal       Float    @default(0)
+
+  items             PresupuestoItem[]
+
+  fechaEntrega      DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum EstadoPresupuesto {
+  PRESUPUESTO
+  ACEPTADO
+  PENDIENTE
+  FABRICACION
+  TERMINADO
+  ENTREGADO
+}
+
+enum TipoItemPresupuesto {
+  MARCO
+  PROTECCION
+  TRASERA
+  PASSE_PARTOUT
+  ARTICULO
+}
+
+model PresupuestoItem {
+  id                String   @id @default(cuid())
+  presupuestoId     String
+  presupuesto       Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  tipoItem          TipoItemPresupuesto
+  orden             Int      @default(0)
+
+  productoId        String
+  producto          Producto @relation(fields: [productoId], references: [id])
+
+  descuentoArticulo Float    @default(0)
+
+  margenSuperior    Float?
+  margenInferior    Float?
+  margenIzquierdo   Float?
+  margenDerecho     Float?
+
+  anchoInterior     Float?
+  altoInterior      Float?
+  anchoExterior     Float?
+  altoExterior      Float?
+
+  precioCalculado   Float    @default(0)
+}
